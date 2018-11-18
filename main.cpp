@@ -9,6 +9,15 @@
 //include the pthread libary
 
 using namespace std;
+/*
+AUTHORS: Michael Lingo + Shane Laskowski
+PURPOSE:This program creates a buffer, creates producer threads, and creates consumer threads.
+        Consumer threads take away buffer items from the buffer while producer threads create
+        and place buffer items in the buffer.  The program must avoid race conditions by solving
+        the critical section problem by applying semaphores.
+KEYNOTES: global variables are shared by all threads, semahpores and their values can be used
+          to manage a shared buffer between threads.
+*/
 
 ////////////////function declarations////////////////
 int insert_item(buffer_item item);  //inserts item into buffer, used by Producers
@@ -16,18 +25,13 @@ int remove_item(buffer_item *item); //removes item from buffer, used by Consumer
 void *producer(void *param);         //A producer thread will run this function
 void *consumer(void *param);         //A consumer thread will run this function
 
-//global variables to be shared by all functions/threads
+////////////////global variables////////////////to be shared by all functions/threads
 buffer_item buffer[BUFFER_SIZE]; //this array is a shared buffer shared by all threads
 sem_t Empty; //semaphore variable that limits
 sem_t Full; //semaphore variable that limits
 mutex *locker; //used to ensure critical section is ran atomically, same thing as a binary semaphore
 
 /*
-PURPOSE:This program creates a buffer, creates producer threads, and creates consumer threads.
-        Consumer threads take away buffer items from the buffer while producer threads create
-        and place buffer items in the buffer.  The program must avoid race conditions by solving
-        the critical section problem by applying semaphores.
-
 argv[1] ==> how long main thread sleeps before terminating (seconds)
 argv[2] ==> the number of producer threads
 argv[3] ==> the number of consumer threads
