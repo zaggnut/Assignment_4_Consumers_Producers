@@ -1,0 +1,4 @@
+#environment stuff and executables
+.vs/*
+*.exe
+*.out
