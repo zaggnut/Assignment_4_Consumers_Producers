@@ -16,10 +16,11 @@ int remove_item(buffer_item *item); //removes item from buffer, used by Consumer
 void *producer(void *param);         //A producer thread will run this function
 void *consumer(void *param);         //A consumer thread will run this function
 
-buffer_item buffer[BUFFER_SIZE];
-sem_t Empty;
-sem_t Full;
-mutex *locker;
+//global variables to be shared by all functions/threads
+buffer_item buffer[BUFFER_SIZE]; //this array is a shared buffer shared by all threads
+sem_t Empty; //semaphore variable that limits
+sem_t Full; //semaphore variable that limits
+mutex *locker; //used to ensure critical section is ran atomically, same thing as a binary semaphore
 
 /*
 PURPOSE:This program creates a buffer, creates producer threads, and creates consumer threads.
@@ -34,38 +35,41 @@ argv[3] ==> the number of consumer threads
 int main(int argc, char *argv[])
 {
     //Get command line arguments argv[1], argv[2], argv[3]
-    //Do error checking for bad arguments here
     srand(time(0));
+
+    //converts the program's arguments (strings) into integers and put inside variables for later use
     int sleepyTime = stoi(argv[1]);
     int numProducers = stoi(argv[2]);
     int numConsumers = stoi(argv[3]);
 
     //Intialize the Buffer with something (random?)
     locker = new mutex();
-    sem_init(&Empty, 0, BUFFER_SIZE);
-    sem_init(&Full, 0, 0);
+    sem_init(&Empty, 0, BUFFER_SIZE); //initializes the semahpore, cannot be shared between processes, value is BUFFER_SIZE
+    sem_init(&Full, 0, 0); //initializes the semaphore, cannot be shared between processes, initialized to 0 but will increase whenever a producer thread adds to the shared buffer
     
+    //creates numProducers amount of threads, these threads will run the producer function
     for (int i = 0; i < numProducers; i++)
     {
-        //Create Producer threads
         pthread_t thread;
         pthread_create(&thread, NULL, producer, NULL);
     }
     
+    //creates numConsumers amount of threads, these threads will run the consumer function
     for (int i = 0; i < numConsumers; i++)
     {
-        //Create Consumer threads
         pthread_t thread;
         pthread_create(&thread, NULL, consumer, NULL);
     }
-    //Make main sleep for certain amount of time
+
+    //Make main sleep for certain amount of time, then after main wakes up,
+    //it will display the values of the two semaphores Full and Empty and display them
+    //main then exits (killing all the threads with it)
     sleep(sleepyTime);
     locker->lock();
     int fullcount, emptycount;
     sem_getvalue(&Full, &fullcount);
     sem_getvalue(&Empty, &emptycount);
     cout << fullcount << emptycount << endl;
-    //Exit properly
     return 0;
 }
 
