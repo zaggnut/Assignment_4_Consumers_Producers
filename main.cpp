@@ -90,7 +90,8 @@ int insert_item(buffer_item itemToAdd)
 
     int index;
     sem_getvalue(&Full, &index); //will attempt to change the value at &index to the value of the Full semaphore
-    buffer[index] = itemToAdd;   //******what if semaphore value is 5 and buffer[5] (out of bounds) is attempted to be accessed?
+    //Note - semaphore FULL regulates the critical section of the consumer threads
+    buffer[index] = itemToAdd;
     //this line is end of critical section
 
     locker->unlock();
@@ -117,7 +118,7 @@ int remove_item(buffer_item *itemThatWasRemoved)
     locker->unlock();
     sem_post(&Empty);
     
-    return 0;
+    return 0; //success
 }
 
 void *producer(void *param)
