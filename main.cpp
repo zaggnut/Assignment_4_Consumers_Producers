@@ -27,8 +27,8 @@ void *consumer(void *param);         //A consumer thread will run this function
 
 ////////////////global variables////////////////to be shared by all functions/threads
 buffer_item buffer[BUFFER_SIZE]; //this array is a shared buffer shared by all threads
-sem_t Empty; //semaphore variable that limits
-sem_t Full; //semaphore variable that limits
+sem_t Empty; //semaphore variable that regulates producer threads
+sem_t Full; //semaphore variable that limits that regulates consumer threads
 mutex *locker; //used to ensure critical section is ran atomically, same thing as a binary semaphore
 
 /*
@@ -79,34 +79,38 @@ int main(int argc, char *argv[])
 
 ////////////////functions' implementation////////////////
 
+//inserts an item to the buffer, return 0 if successful or -1 for error condition
 int insert_item(buffer_item itemToAdd)
 {
-    //insert the item to the buffer, return 0 if successful or -1 for error condition
-    if (sem_wait(&Empty) != 0)
-        return -1;
+    if (sem_wait(&Empty) != 0) //if failure sem_wait returns -1, otherwise returns 0 if successful lock
+        return -1; //failure to add, buffer is full
     locker->lock();
+    //critical section below this line
     int index;
-    sem_getvalue(&Full, &index);
-    buffer[index] = itemToAdd;
+    sem_getvalue(&Full, &index); //will attempt to change the value at &index to the value of the Full semaphore
+    buffer[index] = itemToAdd; //******what if semaphore value is 5 and buffer[5] (out of bounds) is attempted to be accessed?
+    //this line is end of critical section
     locker->unlock();
     sem_post(&Full);
-    return 0;
+    return 0; //success
 }
 
+//removes an item from the buffer, "placed" in *itemThatWasRemoved
+//the item removed is created on the heap ==> once removed we need to keep a track on it
 int remove_item(buffer_item *itemThatWasRemoved)
 {
-    //removes an item from the buffer, "placed" in *itemThatWasRemoved
-    //the item removed is created on the heap ==> once removed we need to keep a track on it
-    //use it in main then delete it.
+
     if (sem_wait(&Full) != 0)
-        return -1;
+        return -1; //error, buffer is empty
     locker->lock();
+    //below is critical section
     int index;
-    sem_getvalue(&Full, &index);
-    *itemThatWasRemoved = buffer[index];
+    sem_getvalue(&Full, &index); //attempts to change the value at &index to the value of the semaphore Full
+    *itemThatWasRemoved = buffer[index]; //retrieves the item to be removed
+    //this line is end of critical section
     locker->unlock();
     sem_post(&Empty);
-    //return 0 if successful, else return -1 if error condition
+    
     return 0;
 }
 
@@ -120,7 +124,9 @@ void *producer(void *param)
         usleep(rand() % 500);
 
         //generate a random number
-        item = rand();
+        item = rand(); 
+
+        //******shouldn't ! (NOT) be placed in front of insert_item(item)
         if (insert_item(item)) //***remember, 0 results in false, -1 results in true
             cout << "Error: Can't add, the buffer is currently full" << endl;
         else
@@ -137,6 +143,7 @@ void *consumer(void *param)
         //sleep for random period
         usleep(rand() % 500);
 
+        //*****shouldn't ! (NOT) be placed in front of remove_item(&item)
         if (remove_item(&item)) //***remember, 0 results in false, -1 results in true
             cout << "Error: Can't remove, the buffer is currently empty" << endl;
         else
