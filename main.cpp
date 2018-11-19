@@ -25,7 +25,8 @@ int remove_item(buffer_item *item); //removes item from buffer, used by Consumer
 void *producer(void *param);        //A producer thread will run this function
 void *consumer(void *param);        //A consumer thread will run this function
 
-////////////////global variables////////////////to be shared by all functions/threads
+////////////////global variables////////////////
+//to be shared by all functions/threads
 buffer_item buffer[BUFFER_SIZE];    //this array is a shared buffer shared by all threads
 sem_t Empty;                        //semaphore variable that regulates producer threads
 sem_t Full;                         //semaphore variable that limits that regulates consumer threads
@@ -118,7 +119,7 @@ int remove_item(buffer_item *itemThatWasRemoved)
     locker->unlock();
     sem_post(&Empty);
     
-    return 0; //success
+    return 0; //successful removal
 }
 
 void *producer(void *param)
