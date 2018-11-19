@@ -1,6 +1,5 @@
 //build with at least C++11, uses thread::yield() and atomics instead of semaphores
 
-
 #include <string>
 #include <iostream>
 #include <stdlib.h>
@@ -8,7 +7,6 @@
 #include <thread>
 #include <vector>
 #include <mutex>
-#include <condition_variable>
 #include <atomic>
 #include "buffer.h" //contains some info for our buffer
 
@@ -66,12 +64,12 @@ int main(int argc, char *argv[])
     front = 0;
     back = 0;
     bufferCount = 0;
-    vector<thread *> ProcuerThreads;
+    vector<thread *> ProducerThreads;
     vector<thread *> ConsumerThreads;
     for (int i = 0; i < numProducers; i++)
     {
         //Create Producer threads
-        ProcuerThreads.push_back(new thread(producer));
+        ProducerThreads.push_back(new thread(producer));
     }
 
     for (int i = 0; i < numConsumers; i++)
