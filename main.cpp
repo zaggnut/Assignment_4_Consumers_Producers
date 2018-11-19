@@ -92,6 +92,9 @@ int insert_item(buffer_item itemToAdd)
     //insert the item to the buffer, return 0 if successful or -1 for error condition
     while (true)
     {
+#if defined __i386__ || __amd64__
+        asm volatile("pause");
+#endif
         if (bufferCount >= BUFFER_SIZE)
             this_thread::yield();
         else
@@ -118,6 +121,9 @@ int remove_item(buffer_item *itemThatWasRemoved)
     //use it in main then delete it.
     while (true)
     {
+#if defined __i386__ || __amd64__
+        asm volatile("pause");
+#endif
         if (bufferCount <= 0)
             this_thread::yield();
         else
