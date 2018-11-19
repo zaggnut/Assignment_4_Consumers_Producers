@@ -22,14 +22,14 @@ KEYNOTES: global variables are shared by all threads, semahpores and their value
 ////////////////function declarations////////////////
 int insert_item(buffer_item item);  //inserts item into buffer, used by Producers
 int remove_item(buffer_item *item); //removes item from buffer, used by Consumers
-void *producer(void *param);         //A producer thread will run this function
-void *consumer(void *param);         //A consumer thread will run this function
+void *producer(void *param);        //A producer thread will run this function
+void *consumer(void *param);        //A consumer thread will run this function
 
 ////////////////global variables////////////////to be shared by all functions/threads
-buffer_item buffer[BUFFER_SIZE]; //this array is a shared buffer shared by all threads
-sem_t Empty; //semaphore variable that regulates producer threads
-sem_t Full; //semaphore variable that limits that regulates consumer threads
-mutex *locker; //used to ensure critical section is ran atomically, same thing as a binary semaphore
+buffer_item buffer[BUFFER_SIZE];    //this array is a shared buffer shared by all threads
+sem_t Empty;                        //semaphore variable that regulates producer threads
+sem_t Full;                         //semaphore variable that limits that regulates consumer threads
+mutex *locker;                      //used to ensure critical section is ran atomically, same thing as a binary semaphore
 
 /*
 argv[1] ==> how long main thread sleeps before terminating (seconds)
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     //Intialize the Buffer with something (random?)
     locker = new mutex();
     sem_init(&Empty, 0, BUFFER_SIZE); //initializes the semahpore, cannot be shared between processes, value is BUFFER_SIZE
-    sem_init(&Full, 0, 0); //initializes the semaphore, cannot be shared between processes, initialized to 0 but will increase whenever a producer thread adds to the shared buffer
+    sem_init(&Full, 0, 0);            //initializes the semaphore, cannot be shared between processes, initialized to 0 but will increase whenever a producer thread adds to the shared buffer
     
     //creates numProducers amount of threads, these threads will run the producer function
     for (int i = 0; i < numProducers; i++)
@@ -83,13 +83,16 @@ int main(int argc, char *argv[])
 int insert_item(buffer_item itemToAdd)
 {
     if (sem_wait(&Empty) != 0) //if failure sem_wait returns -1, otherwise returns 0 if successful lock
-        return -1; //failure to add, buffer is full
+        return -1;             //failure to add, buffer is full
+    
     locker->lock();
     //critical section below this line
+
     int index;
     sem_getvalue(&Full, &index); //will attempt to change the value at &index to the value of the Full semaphore
-    buffer[index] = itemToAdd; //******what if semaphore value is 5 and buffer[5] (out of bounds) is attempted to be accessed?
+    buffer[index] = itemToAdd;   //******what if semaphore value is 5 and buffer[5] (out of bounds) is attempted to be accessed?
     //this line is end of critical section
+
     locker->unlock();
     sem_post(&Full);
     return 0; //success
@@ -102,12 +105,15 @@ int remove_item(buffer_item *itemThatWasRemoved)
 
     if (sem_wait(&Full) != 0)
         return -1; //error, buffer is empty
+    
     locker->lock();
     //below is critical section
+
     int index;
     sem_getvalue(&Full, &index); //attempts to change the value at &index to the value of the semaphore Full
     *itemThatWasRemoved = buffer[index]; //retrieves the item to be removed
     //this line is end of critical section
+    
     locker->unlock();
     sem_post(&Empty);
     
