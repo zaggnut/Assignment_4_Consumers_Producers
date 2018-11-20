@@ -66,6 +66,8 @@ int main(int argc, char *argv[])
     bufferCount = 0;
     vector<thread *> ProducerThreads;
     vector<thread *> ConsumerThreads;
+    cout << "Spawning threads" << endl;
+    sleep(2);
     for (int i = 0; i < numProducers; i++)
     {
         //Create Producer threads
@@ -80,7 +82,7 @@ int main(int argc, char *argv[])
     //Make main sleep for certain amount of time
     sleep(sleepyTime);
     locker->lock();
-    cout << front << back << bufferCount << endl;
+    cout << "The buffer ended at size: " << bufferCount << endl;
     //Exit properly
     return 0;
 }
@@ -92,11 +94,13 @@ int insert_item(buffer_item itemToAdd)
     //insert the item to the buffer, return 0 if successful or -1 for error condition
     while (true)
     {
-#if defined __i386__ || __amd64__
-        asm volatile("pause"); //this improves performance on spin wait loops
-#endif
         if (bufferCount >= BUFFER_SIZE)
+        {
+#if defined __i386__ || __amd64__
+            asm volatile("pause"); //this improves performance on spin wait loops
+#endif
             this_thread::yield();
+        }
         else
         {
             locker->lock();
@@ -121,11 +125,13 @@ int remove_item(buffer_item *itemThatWasRemoved)
     //use it in main then delete it.
     while (true)
     {
-#if defined __i386__ || __amd64__
-        asm volatile("pause"); //this improves performance on spin wait loops
-#endif
         if (bufferCount <= 0)
+        {
+#if defined __i386__ || __amd64__
+            asm volatile("pause"); //this improves performance on spin wait loops
+#endif
             this_thread::yield();
+        }
         else
         {
             locker->lock();
