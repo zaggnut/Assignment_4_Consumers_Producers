@@ -93,7 +93,7 @@ int insert_item(buffer_item itemToAdd)
     while (true)
     {
 #if defined __i386__ || __amd64__
-        asm volatile("pause");
+        asm volatile("pause"); //this improves performance on spin wait loops
 #endif
         if (bufferCount >= BUFFER_SIZE)
             this_thread::yield();
@@ -122,7 +122,7 @@ int remove_item(buffer_item *itemThatWasRemoved)
     while (true)
     {
 #if defined __i386__ || __amd64__
-        asm volatile("pause");
+        asm volatile("pause"); //this improves performance on spin wait loops
 #endif
         if (bufferCount <= 0)
             this_thread::yield();
