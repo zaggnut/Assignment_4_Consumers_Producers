@@ -20,10 +20,10 @@ void *consumer();                   //A consumer thread will run this function
 void printBuffer();                 //Prints the contents of the buffer
 
 buffer_item buffer[BUFFER_SIZE];
-atomic_int front;
-atomic_int back;
-atomic_int bufferCount;
-mutex *locker;
+atomic_int front; //used to indicate the index of 1st buffer slot that isn't empty
+atomic_int back; //used to inidcate the index of the last buffer slot that isn't empty
+atomic_int bufferCount; //counts the number of items within the buffer, used to check if buffer is full or empty
+mutex *locker; //mutex lock to help avoid race conditions
 
 /*
 PURPOSE:This program creates a buffer, creates producer threads, and creates consumer threads.
@@ -59,11 +59,14 @@ int main(int argc, char *argv[])
              << "a number of consumer threads." << endl;
         return -1;
     }
-    //Intialize the Buffer with something (random?)
+
+    //initialization of variables (the buffer is empty at this point)
     locker = new mutex();
     front = 0;
     back = 0;
     bufferCount = 0;
+    
+    //creation of threads
     vector<thread *> ProducerThreads;
     vector<thread *> ConsumerThreads;
     cout << "Spawning threads" << endl;
@@ -79,45 +82,50 @@ int main(int argc, char *argv[])
         //Create Consumer threads
         ConsumerThreads.push_back(new thread(consumer));
     }
-    //Make main sleep for certain amount of time
+
+    //Main will sleep, not wait, for certain amount of time
     sleep(sleepyTime);
-    locker->lock();
+    locker->lock(); //main will hold the lock now, preventing anymore threads from working in their critical sections
     cout << "The buffer ended at size: " << bufferCount << endl;
-    //Exit properly
-    return 0;
+
+    return 0; //now this process ends and kills all threads along with it
 }
 
 ////////////////functions' implementation////////////////
 
+//inserts an item into the buffer for any consumer thread that calls this function
 int insert_item(buffer_item itemToAdd)
 {
     //insert the item to the buffer, return 0 if successful or -1 for error condition
     while (true)
     {
-        if (bufferCount >= BUFFER_SIZE)
+        if (bufferCount >= BUFFER_SIZE) //if buffer is full, do busy waiting
         {
 #if defined __i386__ || __amd64__
-            asm volatile("pause"); //this improves performance on spin wait loops
+            asm volatile("pause"); //preprocessor directive, this improves performance on spin wait loops
 #endif
             this_thread::yield();
         }
         else
         {
-            locker->lock();
+            locker->lock();//mutex lock for critical section
             if (bufferCount >= BUFFER_SIZE)
-                locker->unlock();
+                locker->unlock(); //unlock the mutex lock, because there is a chance that another thread had messed with buffer after that if() statement above
             else
                 break;
         }
     }
+    //critical section
     buffer[back] = itemToAdd;
-    back = (back + 1) % BUFFER_SIZE;
-    bufferCount.fetch_add(1, memory_order_relaxed);
-    printBuffer();
+    back = (back + 1) % BUFFER_SIZE; //makes the back variable "point" to the next index of the buffer that is to get the next inserted item
+    bufferCount.fetch_add(1, memory_order_relaxed); //bufferCount is an atomic variable ==> need to use .fetch_add to add 1 to its value
+    printBuffer(); //prints the buffer to see the changes made
+    //end of critical section
     locker->unlock();
     return 0;
 }
 
+//removes an item for the consumer thread that calls this function
 int remove_item(buffer_item *itemThatWasRemoved)
 {
     //removes an item from the buffer, "placed" in *itemThatWasRemoved
@@ -161,9 +169,9 @@ void *producer()
 
         //generate a random number
         item = rand() % 300;
-        if (insert_item(item) == -1) //***remember, 0 results in false, -1 results in true
+        if (insert_item(item) == -1) //insert_item returns 0 if successful, -1 for failure
             cout << "Error: Can't add, the buffer is currently full" << endl;
-        //else cout << "Producer created and added " << item << " to the buffer" << endl;
+        //else cout << "Producer created and added " << item << " to the buffer" << endl; //used for testing
     }
 }
 
@@ -176,12 +184,13 @@ void *consumer()
         //sleep for random period
         usleep(rand() % 500);
 
-        if (remove_item(&item) == -1) //***remember, 0 results in false, -1 results in true
+        if (remove_item(&item) == -1)
             cout << "Error: Can't remove, the buffer is currently empty" << endl;
-        //else cout << "Consumer consumed and took out " << item << " from the buffer" << endl;
+        //else cout << "Consumer consumed and took out " << item << " from the buffer" << endl; //used for testing
     }
 }
 
+//prints the buffer out, but only prints the indexes with items in them (items that are at and between Front and Back, the rest are just junk)
 void printBuffer()
 {
 
