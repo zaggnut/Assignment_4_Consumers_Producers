@@ -112,7 +112,7 @@ int insert_item(buffer_item itemToAdd)
     }
     buffer[back] = itemToAdd;
     back = (back + 1) % BUFFER_SIZE;
-    bufferCount++;
+    bufferCount.fetch_add(1, memory_order_relaxed);
     printBuffer();
     locker->unlock();
     return 0;
@@ -143,7 +143,7 @@ int remove_item(buffer_item *itemThatWasRemoved)
     }
     *itemThatWasRemoved = buffer[front];
     front = (front + 1) % BUFFER_SIZE;
-    bufferCount--;
+    bufferCount.fetch_add(-1, memory_order_relaxed);
     printBuffer();
     locker->unlock();
     //return 0 if successful, else return -1 if error condition
