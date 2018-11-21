@@ -20,10 +20,10 @@ void *consumer();                   //A consumer thread will run this function
 void printBuffer();                 //Prints the contents of the buffer
 
 buffer_item buffer[BUFFER_SIZE];
-atomic_int front; //used to indicate the index of 1st buffer slot that isn't empty
-atomic_int back; //used to inidcate the index of the last buffer slot that isn't empty
+atomic_int front;       //used to indicate the index of 1st buffer slot that isn't empty
+atomic_int back;        //used to inidcate the index of the last buffer slot that isn't empty
 atomic_int bufferCount; //counts the number of items within the buffer, used to check if buffer is full or empty
-mutex *locker; //mutex lock to help avoid race conditions
+mutex *locker;          //mutex lock to help avoid race conditions
 
 /*
 PURPOSE:This program creates a buffer, creates producer threads, and creates consumer threads.
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     front = 0;
     back = 0;
     bufferCount = 0;
-    
+
     //creation of threads
     vector<thread *> ProducerThreads;
     vector<thread *> ConsumerThreads;
@@ -108,7 +108,7 @@ int insert_item(buffer_item itemToAdd)
         }
         else
         {
-            locker->lock();//mutex lock for critical section
+            locker->lock(); //mutex lock for critical section
             if (bufferCount >= BUFFER_SIZE)
                 locker->unlock(); //unlock the mutex lock, because there is a chance that another thread had messed with buffer after that if() statement above
             else
@@ -117,8 +117,9 @@ int insert_item(buffer_item itemToAdd)
     }
     //critical section
     buffer[back] = itemToAdd;
-    back = (back + 1) % BUFFER_SIZE; //makes the back variable "point" to the next index of the buffer that is to get the next inserted item
+    back = (back + 1) % BUFFER_SIZE;                //makes the back variable "point" to the next index of the buffer that is to get the next inserted item
     bufferCount.fetch_add(1, memory_order_relaxed); //bufferCount is an atomic variable ==> need to use .fetch_add to add 1 to its value
+    cout << "The item " << itemToAdd << " was inserted" << endl;
     printBuffer(); //prints the buffer to see the changes made
     //end of critical section
     locker->unlock();
@@ -152,6 +153,7 @@ int remove_item(buffer_item *itemThatWasRemoved)
     *itemThatWasRemoved = buffer[front];
     front = (front + 1) % BUFFER_SIZE;
     bufferCount.fetch_add(-1, memory_order_relaxed);
+    cout << "The item " << *itemThatWasRemoved << " was removed" << endl;
     printBuffer();
     locker->unlock();
     //return 0 if successful, else return -1 if error condition
